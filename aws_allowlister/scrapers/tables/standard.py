@@ -23,6 +23,8 @@ def scrape_standard_table(db_session: Session, link: str, destination_folder: st
         soup = BeautifulSoup(f.read(), "html.parser")
         table_ids = get_table_ids(this_soup=soup)
 
+        # Skip certain cases based on inconsistent formatting
+        exclusions = ["FedRAMP", "DoD CC SRG", "HIPAA BAA", "MTCS", "HITRUST CSF"]
         # these_results = []
         for this_table_id in table_ids:
             table = soup.find(id=this_table_id)
@@ -31,8 +33,6 @@ def scrape_standard_table(db_session: Session, link: str, destination_folder: st
             tab = table.contents[1]
             standard_name = chomp_keep_single_spaces(str(tab.contents[0]))
 
-            # Skip certain cases based on inconsistent formatting
-            exclusions = ["FedRAMP", "DoD CC SRG", "HIPAA BAA", "MTCS", "HITRUST CSF"]
             if standard_name in exclusions:
                 continue
 
@@ -46,7 +46,7 @@ def scrape_standard_table(db_session: Session, link: str, destination_folder: st
             for row in rows:
                 cells = row.find_all("td")
                 # Skip the first row, the rest are the same
-                if len(cells) == 0 or len(cells) == 1:
+                if len(cells) in {0, 1}:
                     continue
 
                 # Cell 0: Service name

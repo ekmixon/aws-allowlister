@@ -7,32 +7,26 @@ def get_service_name(some_cells):
         service_name_cell = some_cells[0].contents[1]
     except IndexError as err:
         service_name_cell = some_cells[0].contents[0]
-    if isinstance(service_name_cell, NavigableString):
+    if isinstance(service_name_cell, NavigableString) or not isinstance(
+        service_name_cell, Tag
+    ):
         service_name = str(service_name_cell)
-    elif isinstance(service_name_cell, Tag):
-        service_name = service_name_cell.text
     else:
-        service_name = str(service_name_cell)
+        service_name = service_name_cell.text
     service_name = clean_service_name(service_name)
     return service_name
 
 
 def clean_sdks(some_cells):
     sdks = []
-    if len(some_cells) < 3:
-        pass
-    # Otherwise,
-    else:
+    if len(some_cells) >= 3:
         cell_content = chomp(some_cells[1].contents[0])
         if "<a" in cell_content or "]" in cell_content:
             cell_content = some_cells[1].contents[0].text
-        if not cell_content:
-            pass
-        else:
+        if cell_content:
             if "," in cell_content:
                 tmp_sdk_list = cell_content.split(",")
-                for tmp_sdk in tmp_sdk_list:
-                    sdks.append(chomp(tmp_sdk))
+                sdks.extend(chomp(tmp_sdk) for tmp_sdk in tmp_sdk_list)
             else:
                 sdks = [cell_content]
     return sdks
@@ -77,31 +71,24 @@ def clean_status_cell_contents(status_cell_contents):
     else:
         print("idk what type it is")
 
-    if status_cell_contents is None:
-        status = False
-    elif "✓" in status_cell_contents:
-        status = True
-    elif status_cell_contents != "✓":
-        status = False
-    else:
-        status = True
+    status = status_cell_contents is not None and (
+        "✓" in status_cell_contents or status_cell_contents == "✓"
+    )
 
     return status, status_cell_contents
 
 
 def get_table_ids(this_soup):
-    table_ids = []
-    for li in this_soup.find_all("li"):
-        if li.get("id"):
-            if li.get("id").startswith("aws-element"):
-                table_ids.append(li.get("id"))
-    return table_ids
+    return [
+        li.get("id")
+        for li in this_soup.find_all("li")
+        if li.get("id") and li.get("id").startswith("aws-element")
+    ]
 
 
 def get_standard_names(this_soup):
-    all_standard_names = []
-    for li in this_soup.find_all("li"):
-        if li.get("id"):
-            if li.get("id").startswith("aws-element"):
-                all_standard_names.append(li.contents[1].text)
-    return all_standard_names
+    return [
+        li.contents[1].text
+        for li in this_soup.find_all("li")
+        if li.get("id") and li.get("id").startswith("aws-element")
+    ]

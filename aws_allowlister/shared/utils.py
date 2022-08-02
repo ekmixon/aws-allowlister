@@ -14,8 +14,7 @@ ALL_SERVICE_PREFIXES = get_all_service_prefixes()
 
 def get_service_name_matching_iam_service_prefix(iam_service_prefix):
     if iam_definition.get(iam_service_prefix):
-        service_name = get_service_prefix_data(iam_service_prefix)["service_name"]
-        return service_name
+        return get_service_prefix_data(iam_service_prefix)["service_name"]
     else:
         return None
 

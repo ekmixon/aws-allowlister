@@ -13,8 +13,7 @@ class RawScrapingData:
                 "compliance_standard_name"
             )
         )
-        standards = [row.compliance_standard_name for row in query.all()]
-        return standards
+        return [row.compliance_standard_name for row in query.all()]
 
     def get_rows(self, db_session, sdk_name=None, service_name=None, standard=None):
         if sdk_name:
@@ -47,10 +46,7 @@ class RawScrapingData:
         rows = db_session.query(RawScrapingDataTable).filter(
             RawScrapingDataTable.compliance_standard_name == standard_name
         )
-        sdk_names = {}
-        for row in rows:
-            sdk_names[row.sdk_name] = row.service_name
-        return sdk_names
+        return {row.sdk_name: row.service_name for row in rows}
 
     def get_service_names_matching_compliance_standard(self, db_session, standard_name):
         """
@@ -59,10 +55,7 @@ class RawScrapingData:
         rows = db_session.query(RawScrapingDataTable).filter(
             RawScrapingDataTable.compliance_standard_name == standard_name
         )
-        service_names = {}
-        for row in rows:
-            service_names[row.service_name] = row.sdk_name
-        return service_names
+        return {row.service_name: row.sdk_name for row in rows}
 
     def add_entry_to_database(self, db_session, compliance_standard_name, service_name, sdk):
         """Add an entry to the database"""

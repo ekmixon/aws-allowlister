@@ -15,8 +15,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 def validate_comma_separated_aws_services(ctx, param, value):
     if value is not None:
         try:
-            include_services = value.split(",")
-            return include_services
+            return value.split(",")
         except ValueError:
             raise click.BadParameter('Supply the AWS services in a comma separated string.')
 
@@ -205,13 +204,8 @@ def generate(all_standards, soc, pci, hipaa, iso, fedramp_high, fedramp_moderate
              include, include_file, exclude, exclude_file,
              table, json_list, excluded_table, excluded_json_list, quiet):
     standards = []
-    if quiet:
-        log_level = getattr(logging, "WARNING")
-        set_stream_logger(level=log_level)
-    else:
-        log_level = getattr(logging, "INFO")
-        set_stream_logger(level=log_level)
-
+    log_level = getattr(logging, "WARNING") if quiet else getattr(logging, "INFO")
+    set_stream_logger(level=log_level)
     # If include-file argument is supplied, then read the file and use it as the include args.
     if include_file:
         include = utils.read_yaml_file(include_file)
@@ -262,7 +256,10 @@ def generate(all_standards, soc, pci, hipaa, iso, fedramp_high, fedramp_moderate
         and not irap
     ):
         standards = ["SOC", "PCI", "HIPAA", "ISO", "FedRAMP_High", "FedRAMP_Moderate"]
-        logger.info(f"--all was selected. The policy will include the default standard(s): {str(', '.join(standards))}")
+        logger.info(
+            f"--all was selected. The policy will include the default standard(s): {', '.join(standards)}"
+        )
+
     if (
         not all_standards
         and not soc
@@ -279,9 +276,12 @@ def generate(all_standards, soc, pci, hipaa, iso, fedramp_high, fedramp_moderate
         and not irap
     ):
         standards = ["SOC", "PCI", "HIPAA", "ISO", "FedRAMP_High", "FedRAMP_Moderate"]
-        logger.info(f"--all was selected. The policy will include the default standard(s): {str(', '.join(standards))}")
-    logger.info(f"Note: to silence these logs, supply the argument '--quiet'")
-    logger.info(f"Policies for standard(s): {str(', '.join(standards))}")
+        logger.info(
+            f"--all was selected. The policy will include the default standard(s): {', '.join(standards)}"
+        )
+
+    logger.info("Note: to silence these logs, supply the argument '--quiet'")
+    logger.info(f"Policies for standard(s): {', '.join(standards)}")
 
     # If --table is provided, print as Markdown table. Otherwise, print the JSON policy
     if table:
@@ -310,7 +310,11 @@ def generate(all_standards, soc, pci, hipaa, iso, fedramp_high, fedramp_moderate
             except AttributeError as error:
                 logger.info(error)
                 service_authorization_url = ""
-            services_json.update({service_prefix:{'service_name':service_name, 'service_authorization_url':service_authorization_url}})
+            services_json[service_prefix] = {
+                'service_name': service_name,
+                'service_authorization_url': service_authorization_url,
+            }
+
         print(json.dumps(services_json, indent=2))
     elif excluded_table:
         # Get the list of allowlist prefixes
@@ -318,10 +322,12 @@ def generate(all_standards, soc, pci, hipaa, iso, fedramp_high, fedramp_moderate
         # Get the list of all service prefixes, not just the allowlist ones
         all_services = get_all_service_prefixes()
         # Create a list of services that don't exist in allowed_services
-        excluded_services = []
-        for service_prefix in all_services:
-            if service_prefix not in allowed_services:
-                excluded_services.append(service_prefix)
+        excluded_services = [
+            service_prefix
+            for service_prefix in all_services
+            if service_prefix not in allowed_services
+        ]
+
         excluded_services.sort()
         # Create the table
         services_tabulated = []
@@ -338,10 +344,12 @@ def generate(all_standards, soc, pci, hipaa, iso, fedramp_high, fedramp_moderate
         allowed_services = generate_allowlist_service_prefixes(standards, include, exclude)
         all_services = get_all_service_prefixes()
 
-        excluded_services = []
-        for service_prefix in all_services:
-            if service_prefix not in allowed_services:
-                excluded_services.append(service_prefix)
+        excluded_services = [
+            service_prefix
+            for service_prefix in all_services
+            if service_prefix not in allowed_services
+        ]
+
         excluded_services.sort()
 
         for service_prefix in excluded_services:
@@ -351,7 +359,11 @@ def generate(all_standards, soc, pci, hipaa, iso, fedramp_high, fedramp_moderate
             except AttributeError as error:
                 logger.info(error)
                 service_authorization_url = ""
-            services_json.update({service_prefix:{'service_name':service_name, 'service_authorization_url':service_authorization_url}})
+            services_json[service_prefix] = {
+                'service_name': service_name,
+                'service_authorization_url': service_authorization_url,
+            }
+
         print(json.dumps(services_json, indent=2))
     else:
         results = generate_allowlist_scp(standards, include, exclude)
@@ -372,21 +384,19 @@ def generate_allowlist_scp(standards: list, include: list = None, exclude: list 
     """Get the SCP Policy document"""
     allowed_services = generate_allowlist_service_prefixes(standards=standards, include=include, exclude=exclude)
     allowed_services = format_allowlist_services(allowed_services)
-    policy = {
+    return {
         "Version": "2012-10-17",
         "Statement": {
             "Sid": "AllowList",
             "Effect": "Deny",
             "Resource": "*",
-            "NotAction": allowed_services
+            "NotAction": allowed_services,
         },
     }
-    return policy
 
 
 def format_allowlist_services(services: list):
-    result = ["{}{}".format(i, ":*") for i in services]
-    return result
+    return [f"{i}:*" for i in services]
 
 
 def generate_allowlist_service_prefixes(standards: list, include: list = None, exclude: list = None):
@@ -394,15 +404,15 @@ def generate_allowlist_service_prefixes(standards: list, include: list = None, e
     db_session = connect_db()
     compliance_data = ComplianceData()
     # This is a list of sets
-    standard_results = []
-    for standard in standards:
-        standard_results.append(
-            set(
-                compliance_data.get_compliant_services(
-                    db_session=db_session, compliance_standard=standard
-                )
+    standard_results = [
+        set(
+            compliance_data.get_compliant_services(
+                db_session=db_session, compliance_standard=standard
             )
         )
+        for standard in standards
+    ]
+
     # Intersect a collection of sets
     if len(standard_results) > 1:
         services = list(standard_results[0].intersection(*standard_results))
@@ -417,11 +427,10 @@ def generate_allowlist_service_prefixes(standards: list, include: list = None, e
     allowed_services = []
     for service in services:
         # Remove the services that were specified for exclusion
-        if exclude:
-            if service in exclude:
-                logger.info(f"{service} has been excluded from the policy")
-                continue
+        if exclude and service in exclude:
+            logger.info(f"{service} has been excluded from the policy")
+            continue
         # If the service is not excluded, proceed
         allowed_services.append(service)
-        # allowed_services.append(f"{service}:*")
+            # allowed_services.append(f"{service}:*")
     return allowed_services

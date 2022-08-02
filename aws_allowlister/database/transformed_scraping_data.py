@@ -24,11 +24,10 @@ class TransformedScrapingData:
                 "compliance_standard_name"
             )
         )
-        standards = [row.compliance_standard_name for row in query.all()]
         # Note to self: this could also be accomplished with:
         # results = transformed_scraping_database.get_rows(db_session=db_session, service_prefix="s3")
         # list(set(map(lambda x: x.get("compliance_standard_name"), results)))
-        return standards
+        return [row.compliance_standard_name for row in query.all()]
 
     def get_rows(self, db_session, service_prefix=None, service_name=None, standard=None):
         """Get rows as a list of dictionaries"""
@@ -62,10 +61,7 @@ class TransformedScrapingData:
         rows = db_session.query(TransformedScrapingDataTable).filter(
             TransformedScrapingDataTable.compliance_standard_name == standard_name
         )
-        sdk_names = {}
-        for row in rows:
-            sdk_names[row.sdk_name] = row.service_name
-        return sdk_names
+        return {row.sdk_name: row.service_name for row in rows}
 
     def get_service_names_matching_compliance_standard(self, db_session, standard_name):
         """
@@ -74,10 +70,7 @@ class TransformedScrapingData:
         rows = db_session.query(TransformedScrapingDataTable).filter(
             TransformedScrapingDataTable.compliance_standard_name == standard_name
         )
-        service_names = {}
-        for row in rows:
-            service_names[row.service_name] = row.sdk_name
-        return service_names
+        return {row.service_name: row.sdk_name for row in rows}
 
     def set_sdk_name_given_service_name(self, db_session, service_name, sdk_name):
         """Set the SDK name given the name of the AWS Service"""
@@ -142,11 +135,13 @@ class TransformedScrapingData:
         raw_scraping_data = RawScrapingData()
         for standard in standards:
             # The service name in IAM-land
-            iam_service_names = {}
-            for service_prefix in ALL_SERVICE_PREFIXES:
-                iam_service_names[service_prefix] = get_service_prefix_data(service_prefix)[
+            iam_service_names = {
+                service_prefix: get_service_prefix_data(service_prefix)[
                     "service_name"
                 ]
+                for service_prefix in ALL_SERVICE_PREFIXES
+            }
+
             # The service name in compliance land
             # Let's get it from the scraping data table because we haven't fully populated the transformed table yet
             standard_service_names = raw_scraping_data.get_service_names_matching_compliance_standard(
@@ -167,10 +162,7 @@ class TransformedScrapingData:
                 service_name = clean_service_name_after_brackets_and_parentheses(compliance_name)
                 compliance_service_names[service_prefix] = service_name
 
-            compliance_names = []
-            for item in iam_service_names:
-                compliance_names.append(iam_service_names.get(item))
-
+            compliance_names = [iam_service_names.get(item) for item in iam_service_names]
             for iam_service_prefix in list(iam_service_names.keys()):
                 iam_name = iam_service_names[iam_service_prefix]
                 for name in compliance_names:

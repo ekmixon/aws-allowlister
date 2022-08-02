@@ -38,12 +38,11 @@ def get_aws_html(link, file_path):
 
         for script in soup.find_all("script"):
             try:
-                if "src" in script.attrs:
-                    if script.get("src").startswith("/"):
-                        temp = script.attrs["src"]
-                        script.attrs["src"] = script.attrs["src"].replace(
-                            temp, f"https://docs.aws.amazon.com{temp}"
-                        )
+                if "src" in script.attrs and script.get("src").startswith("/"):
+                    temp = script.attrs["src"]
+                    script.attrs["src"] = script.attrs["src"].replace(
+                        temp, f"https://docs.aws.amazon.com{temp}"
+                    )
             except TypeError as t_e:
                 logger.warning(t_e)
                 logger.warning(script)

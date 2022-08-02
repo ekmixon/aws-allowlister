@@ -42,7 +42,7 @@ def scrape_dodccsrg_table(db_session: Session, link: str, destination_folder: st
             for row in rows:
                 cells = row.find_all("td")
                 # Skip the first row, the rest are the same
-                if len(cells) == 0 or len(cells) == 1:
+                if len(cells) in {0, 1}:
                     continue
 
                 # Cell 0: Service name

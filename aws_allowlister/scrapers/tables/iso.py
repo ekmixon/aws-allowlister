@@ -20,11 +20,7 @@ def scrape_iso_table(db_session: Session, link: str, destination_folder: str, fi
     with open(html_file_path, "r") as f:
         soup = BeautifulSoup(f.read(), "html.parser")
         table = soup.find("tbody")
-        rows = []
-        for row in table.contents:
-            if isinstance(row, Tag):
-                rows.append(row)
-
+        rows = [row for row in table.contents if isinstance(row, Tag)]
         for row in rows:
             if isinstance(row, Tag):
                 service_name = clean_service_name(str(row.contents[1].text))

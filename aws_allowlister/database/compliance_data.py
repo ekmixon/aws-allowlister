@@ -108,7 +108,7 @@ class ComplianceData:
         status = result_row.get(compliance_standard)
         db_session.close()
         # We set the database value to "true" or an empty string to avoid annoying SQLite errors
-        return bool(status == "true")
+        return status == "true"
 
     def get_rows_matching_service_prefix(self, db_session, service_prefix):
         """Get rows matching a given prefix and standard"""
@@ -127,9 +127,7 @@ class ComplianceData:
     def service_prefixes(self, db_session):
         """Get a list of all unique service prefixes"""
         rows = self.get_rows(db_session=db_session)
-        service_prefixes = list(set(map(lambda x: x.get("service_prefix"), rows)))
-        service_prefixes.sort()
-        return service_prefixes
+        return sorted(set(map(lambda x: x.get("service_prefix"), rows)))
 
     def get_compliant_services(self, db_session, compliance_standard):
         """Get a list of services compliant with a standard like ISO or SOC"""
@@ -210,10 +208,7 @@ class ComplianceData:
 
         print("\nOVERRIDES: SECTION 4: Direct inserts, per framework")
         for standard in self.standard_names(db_session):
-            # If 'SOC' exists under 'direct_inserts'
-            service_keys = overrides.direct_inserts.get(standard)
-            # If there are any services listed under that compliance standard
-            if service_keys:
+            if service_keys := overrides.direct_inserts.get(standard):
                 # Then loop through it
                 for service in service_keys:
                     current_rows = self.get_rows(
@@ -250,10 +245,7 @@ class ComplianceData:
             raise Exception("Overrides should be an object class of type Overrides")
 
         for standard in self.standard_names(db_session):
-            # If 'SOC' exists under 'direct_removals'
-            service_keys = overrides.direct_removals.get(standard)
-            # If there are any services listed under that compliance standard
-            if service_keys:
+            if service_keys := overrides.direct_removals.get(standard):
                 # Then loop through it
                 for service in service_keys:
                     rows_removed = self.update_compliance_status(
